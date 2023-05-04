@@ -22,8 +22,8 @@ bundle install
 ```
 rspec spec
 ```
-- If you want to run the script without tests you should uncomment two last lines in file `spec/minfin_spec.rb` and run
+- If you want to run the script without tests you should uncomment last lines in file `main.rb` and run
 ```
 ruby main.rb
 ```
-- Don't start test cases with active two last lines in `spec/minfin_spec.rb`.
+- Don't start test cases with active last lines in `main.rb`.

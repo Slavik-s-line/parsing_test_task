@@ -8,51 +8,63 @@ Capybara.app_host = 'https://minfin.com.ua/'
 
 class MinfinParser
   include Capybara::DSL
-  attr_accessor :answer_data
+  attr_accessor :answer_data, :username, :password
 
-  def login
-    find('.js-toggle-auth').click
-    fill_in('Login', :with => 'slaviksline')
-    fill_in('Password', :with => '123456789rd')
-    find('button.mfm-auth--submit-btn:nth-child(7)').click
-  end
-
-  def navigate
-    find('div.menu__item:nth-child(1) > a:nth-child(1)').click
-    find('.nav > li:nth-child(4) > a:nth-child(1)').click
-  end
-
-  def search_data
+  def initialize
     self.answer_data = {}
-    elems = all('div.sc-1x32wa2-0:nth-child(n) > table:nth-child(1) > tbody:nth-child(2) > tr:nth-child(n)').to_a
-    elems.each do |elem|
-      currency = elem.find('td:nth-child(2) > a:nth-child(1)').text
-      name = elem.find('td:nth-child(3)').text
-      rate = elem.find('td:nth-child(4) > div:nth-child(1)').text.split()[0]
-      self.answer_data[currency] = {'name': name, 'rate': rate}
+    self.username = 'slaviksline'
+    self.password = '123456789rd'
+  end
+
+  def user_login
+    find('div[title="Гость"]', text: 'ВХІД').click
+    fill_in('Login', with: username)
+    fill_in('Password', with: password)
+    find('button', text: 'ВХІД').click
+  end
+
+  def user_signed_in?
+    find("a[title=#{username}]").click
+    return true if find('a', text: 'Вихід')
+  end
+
+  def navigate_to_nbu_currency_page
+    click_link('Валюта')
+    first('a', text: 'НБУ').click
+  end
+
+  def search_tables_with_nbu_currency
+    currency_tables = page.all(:xpath,
+      "//tr[contains(., 'Код') and contains(., 'Валюта') and contains(., 'Назва') and contains(., 'Курс')]")
+  end
+
+  def search_nbu_currency
+    self.search_tables_with_nbu_currency.each do |table|
+      header_names = table.all('th')
+      all_currency_in_table = table.find(:xpath, '../../..').find('tbody').all('tr')
+      all_currency_in_table.each do |specific_currency_row|
+        specific_currency_columns = specific_currency_row.all('td')
+        answer_data[specific_currency_columns[1].text] = {
+          header_names[0].text() => specific_currency_columns[0].text,
+          header_names[1].text() => specific_currency_columns[1].text, 
+          header_names[3].text() => specific_currency_columns[3].text.split[0] 
+        }
+      end
     end
   end
 
-  def save_data
-    File.open('answer.json','w') do |f|
-      f.write(self.answer_data.to_json)
+  def save_nbu_currency_to_file
+    File.open('answer.json', 'w') do |f|
+      f.write(answer_data.to_json)
     end
-  end
-
-  def main_parser
-    # open site
-    visit('/')
-    # login
-    login
-    # navigate to desired page
-    navigate
-    # search needed data
-    search_data
-    # save data to json file
-    save_data
   end
 end
 
 # uncoment next lines if you run without rspec
-# t = MinfinParser.new
-# t.main_parser
+app = MinfinParser.new
+app.visit('/')
+app.user_login
+app.user_signed_in?
+app.navigate_to_nbu_currency_page
+app.search_nbu_currency
+app.save_nbu_currency_to_file
