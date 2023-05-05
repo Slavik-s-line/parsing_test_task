@@ -28,17 +28,21 @@ describe 'log in and search NBU currency data' do
     end
   end
 
-  context 'should find tables with NBU currency' do
-    it 'table must have 4 columns' do
-      header_columns = app.search_tables_with_nbu_currency[0].all('th')
-      expect(header_columns.size).to equal(4)
+  context 'should find NBU data by column name' do
+    it 'must have "Долар США" value' do
+      expect(app.search_nbu_currency_by_column('Назва').map(&:text).include?('Долар США')).to be true
+    end
+  end
+
+  context 'should not find column with name "Продаж"' do
+    it 'must be ExpectationNotMet error' do
+      expect{app.search_nbu_currency_by_column('Продаж')}.to raise_error(Capybara::ExpectationNotMet)
     end
   end
 
   context 'should find NBU currency data' do
     it 'must have "USD" key' do
-      app.search_nbu_currency
-      expect(app.answer_data.has_key?('USD')).to be true
+      expect(app.collect_nbu_currency_in_hash.has_key?('840')).to be true
     end
   end
 
