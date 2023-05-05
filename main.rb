@@ -34,16 +34,26 @@ class MinfinParser
     first('a', text: 'НБУ').click
   end
 
-  def search_nbu_currency_by_column(title)
-    if page.first(:xpath, "//thead/tr/th[contains(.,'#{title}')]")
-      path = "//tbody/tr/td[(count(//thead/tr/th[contains(.,'#{title}')]/preceding-sibling::*) div (count(//thead/tr[contains(.,'#{title}')])))+1]"
-      page.all(:xpath, path)
+  def find_nbu_currency_tables
+    currency_tables = page.all(:xpath,
+      "//thead/tr[contains(., 'Код') and contains(., 'Валюта') and contains(., 'Назва') and contains(., 'Курс')]/../..")
+  end
+
+  def search_nbu_currency_by_column(title, tables)
+    summary_data_from_all_tables = []
+    tables.each do |table|
+      if table.find(:xpath, "thead/tr/th[contains(.,'#{title}')]")
+        path = "tbody/tr/td[(count(../../../thead/tr/th[contains(.,'#{title}')]/preceding-sibling::*))+1]"
+        summary_data_from_all_tables.concat(table.all(:xpath, path).map(&:text))
+      end
     end
+    summary_data_from_all_tables
   end
 
   def collect_nbu_currency_in_hash
-    currency = search_nbu_currency_by_column('Код').map(&:text)
-    currency_value = search_nbu_currency_by_column('Курс').map{ |value| value.text.split[0] }
+    tables = find_nbu_currency_tables
+    currency = search_nbu_currency_by_column('Код', tables)
+    currency_value = search_nbu_currency_by_column('Курс', tables).map{ |value| value.split[0] }
     self.answer_data = Hash[currency.zip(currency_value)]
   end
 
@@ -60,5 +70,6 @@ app.visit('/')
 app.user_login
 app.user_signed_in?
 app.navigate_to_nbu_currency_page
+app.find_nbu_currency_tables
 app.collect_nbu_currency_in_hash
 app.save_nbu_currency_to_file
